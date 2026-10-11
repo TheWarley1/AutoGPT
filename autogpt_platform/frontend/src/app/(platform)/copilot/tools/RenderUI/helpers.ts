@@ -75,10 +75,15 @@ export function buildUIFollowUp(
     .slice(0, MAX_FORM_VALUES)
     .map(([name, value]) => [
       name.slice(0, 200),
-      typeof value === "string" ? value.slice(0, 2000) : value,
+      typeof value === "string" ? value : value,
     ]);
   const body = message.trim().slice(0, 2000);
-  return `${body}\n\nFrom the interactive view: ${title.slice(0, 200)}${values.length ? `\nSubmitted values:\n${JSON.stringify(Object.fromEntries(values), null, 2)}` : ""}`;
+  const result = `${body}\n\nFrom the interactive view: ${title.slice(0, 200)}${values.length ? `\nSubmitted values:\n${JSON.stringify(Object.fromEntries(values), null, 2)}` : ""}`;
+  if (result.length > 64_000)
+    throw new Error(
+      "This submission exceeds the chat message limit. Download the data or submit a smaller selection; your edits are still here.",
+    );
+  return result;
 }
 
 export function readUIDraft(

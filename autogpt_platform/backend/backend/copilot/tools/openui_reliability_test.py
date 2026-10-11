@@ -30,7 +30,7 @@ def fresh_turn():
 )
 async def test_saved_summary_uses_the_rendered_calculation(ink, expected):
     source = (
-        'root = Workspace("Printer", "Supplied quote", [form, total])\n'
+        'root = Workspace("Printer", "Supplied quote", [form, total], "printer")\n'
         'form = Form("quote", "Price", [NumberField("ink", "Monthly ink", '
         f'{ink}, 0, null, 0.01)], "Compare", "Compare quote")\n'
         'total = CalculatedMetric("quote", "Annual cost", "90+12*ink", "currency", "USD", 2)'

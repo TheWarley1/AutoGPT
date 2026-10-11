@@ -37,6 +37,7 @@ class RenderUIResponse(ToolResponseBase):
     type: ResponseType = ResponseType.UI_RENDERED
     version: Literal[1] = 1
     source: str
+    view_id: str | None = None
 
 
 @cache
@@ -52,9 +53,10 @@ class RenderUITool(BaseTool):
     @property
     def description(self) -> str:
         return (
-            "Present an interactive map, timeline, chart, comparison, checklist, "
+            "Present an inline artifact, connected dashboard, editable data grid, map, "
+            "itinerary, task board, chart, comparison, live execution status, "
             "or input form in "
-            "the conversation using existing data. Buttons continue this conversation; "
+            "the conversation using existing data. Forms continue this conversation; "
             "rendering never performs external actions."
         )
 
@@ -143,7 +145,16 @@ async def _validated_response(response: RenderUIResponse) -> ToolResponseBase:
             "Provide the complete answer as plain text instead.",
             session_id=response.session_id,
         )
+    if not validation.view_id:
+        return ErrorResponse(
+            message="View not published: Workspace requires a stable viewId from "
+            "the first render so edits can be saved. Retry with "
+            'Workspace(title, description, children, "stable-view-id"). '
+            "Reuse this ID when revising this task; use a new ID for a new task.",
+            session_id=response.session_id,
+        )
     response.message = validation.summary
+    response.view_id = validation.view_id
     if len(response.model_dump_json().encode()) > 70_000:
         return ErrorResponse(
             message="This view is too large. Use fewer rows or shorter descriptions.",

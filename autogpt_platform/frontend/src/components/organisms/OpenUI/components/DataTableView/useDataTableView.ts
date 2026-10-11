@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { compareCells } from "@/lib/openui/data-values";
 
 export function useDataTableView(rows: string[][]) {
   const [query, setQuery] = useState("");
@@ -13,11 +14,8 @@ export function useDataTableView(rows: string[][]) {
   if (sort.column >= 0)
     visibleRows.sort(
       (a, b) =>
-        String(a[sort.column] ?? "").localeCompare(
-          String(b[sort.column] ?? ""),
-          undefined,
-          { numeric: true },
-        ) * (sort.ascending ? 1 : -1),
+        compareCells(a[sort.column], b[sort.column]) *
+        (sort.ascending ? 1 : -1),
     );
   function toggleSort(column: number) {
     setSort((current) => ({

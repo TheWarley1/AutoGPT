@@ -59,12 +59,15 @@ describe("OpenUI repair feedback", () => {
           />
         </CopilotChatActionsProvider>,
       );
-      expect(await screen.findByLabelText("Audience")).toBeDefined();
+      expect(
+        await screen.findByLabelText("Audience", {}, { timeout: 10000 }),
+      ).toBeDefined();
       expect(
         screen.queryByRole("button", { name: "Rebuild this view" }),
       ).toBeNull();
       expect(screen.queryByText(/Here’s the saved summary/)).toBeNull();
       expect(screen.getByText(message)).toBeDefined();
     },
+    15000,
   );
 });

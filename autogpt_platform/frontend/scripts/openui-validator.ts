@@ -15,6 +15,7 @@ async function main() {
     process.stdout.write(
       JSON.stringify({
         valid: true,
+        ...(root.props.viewId ? { view_id: root.props.viewId } : {}),
         error: "",
         summary: workspaceSummary(root),
       }),

@@ -35,3 +35,23 @@ one of two full journeys despite both showing the corrected capacity distinction
 the other generated an inaccurate rounded alternative. The complete collection has
 218 recorded episodes and 334 user turns. These are exploratory results, with
 explicit remaining model failures and no demonstrated overall development gain.
+
+`capability-journeys.jsonl` adds 36 scenarios and 44 turns for the expanded inline
+catalog: 24 development cases and 12 reserved checks. It refines the previous
+capability audit's proposed workflows, rather than claiming every variant as a
+new independent use case. Journeys cover a dated SF itinerary and calendar,
+multi-option shortlists, contact repair, numeric ledger sorting, 65-record
+selection, connected dashboards, missing chart values, conditional registration,
+typed event briefs, prose editing, workspace image outputs and execution status.
+Negative cases cover missing locations/data/run IDs, ambiguous local times,
+misleading charts, infeasible plans, credential collection and false claims that
+selecting something executes an action.
+
+The Desktop collection `OpenUI-capabilities-2026-10-11` freezes criteria and splits
+before generation, retains two sessions per scenario/candidate, and separates
+model output quality from canonical validation and actual UI interactions. The
+implementing agent authors and reviews the criteria; results are not independent
+or blinded. Require stable view IDs from the first response and compare identities
+across revisions. A source can parse successfully yet fail durable editing.
+`frontend/scripts/inspect-openui-journeys.ts` validates recorded sources and
+exports their parsed component properties for review; it is not a semantic judge.

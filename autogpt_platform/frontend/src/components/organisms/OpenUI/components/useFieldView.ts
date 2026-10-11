@@ -7,10 +7,7 @@ import {
 } from "@openuidev/react-lang";
 import { useEffect } from "react";
 
-export function useFieldView<T extends string | number | boolean | unknown[]>(
-  name: string,
-  defaultValue: T,
-) {
+export function useFieldView<T>(name: string, defaultValue: T) {
   const formName = useFormName();
   const getFieldValue = useGetFieldValue();
   const setFieldValue = useSetFieldValue();

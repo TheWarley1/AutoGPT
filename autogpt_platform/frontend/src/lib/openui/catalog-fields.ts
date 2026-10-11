@@ -1,3 +1,16 @@
+import { Itinerary } from "./catalog-itinerary";
+import { DateTimeField } from "./catalog-temporal";
+import { TaskBoard } from "./catalog-tasks";
+import { DataGrid } from "./catalog-data";
+import { ResultList, RankedList } from "./catalog-results";
+import {
+  ValidatedField,
+  SearchSelect,
+  FieldGroup,
+  DateRangeField,
+  RangeField,
+  DocumentEditor,
+} from "./catalog-inputs";
 import { defineComponent } from "@openuidev/lang-core";
 import { z } from "zod/v4";
 import { Comparison, CostTable } from "./catalog-connected";
@@ -91,6 +104,18 @@ export const Form = defineComponent({
     fields: z
       .array(
         z.union([
+          TaskBoard.ref,
+          DateTimeField.ref,
+          Itinerary.ref,
+          DataGrid.ref,
+          ResultList.ref,
+          RankedList.ref,
+          ValidatedField.ref,
+          SearchSelect.ref,
+          FieldGroup.ref,
+          DateRangeField.ref,
+          RangeField.ref,
+          DocumentEditor.ref,
           Field.ref,
           SelectField.ref,
           DateField.ref,

@@ -31,7 +31,7 @@ from backend.copilot.tools.openui_validator import (
 )
 from backend.util.tool_call_loop import LLMToolCall
 
-SOURCE = 'root = Workspace("Revenue", "From the uploaded report", [Metrics([Metric("Revenue", "$42,000", "Q3", "positive")])])'
+SOURCE = 'root = Workspace("Revenue", "From the uploaded report", [Metrics([Metric("Revenue", "$42,000", "Q3", "positive")])], "revenue")'
 
 
 @pytest.fixture
@@ -190,6 +190,22 @@ async def test_render_ui_returns_a_persistable_result():
     assert "Revenue: $42,000 (Q3)" in payload["message"]
     assert payload["session_id"] == session.session_id
     assert payload["version"] == 1
+    assert payload["view_id"] == "revenue"
+
+
+@pytest.mark.asyncio
+async def test_new_views_require_an_id_but_historical_sources_remain_readable():
+    legacy = SOURCE.replace(', "revenue")', ")")
+    parsed = await render_ui.validate_openui_source(legacy)
+    assert parsed.valid
+    assert parsed.view_id is None
+    rejected = await TOOL_REGISTRY["render_ui"]._execute(
+        "owner", make_session("owner"), source=legacy
+    )
+    assert rejected.type == ResponseType.ERROR
+    assert "stable viewId" in rejected.message
+    assert "Retry" in rejected.message
+    assert "source" not in rejected.model_dump()
 
 
 @pytest.mark.asyncio
@@ -292,7 +308,7 @@ async def test_missing_canonical_summary_does_not_publish_a_view(
 async def test_summary_expansion_cannot_exceed_the_tool_output_byte_limit(
     render_ui_tool,
 ):
-    source = 'root = Workspace("Large", "' + "漢" * 15_000 + '", [])'
+    source = 'root = Workspace("Large", "' + "漢" * 15_000 + '", [], "large")'
     assert len(source.encode()) < 70_000
     result = await render_ui_tool._execute(
         "owner", make_session("owner"), source=source
@@ -316,7 +332,7 @@ async def test_sdk_returns_repair_feedback_then_publishes_only_corrected_view(
         wrapper = _make_truncating_wrapper(
             dispatcher_should_not_run, "run_capability", required_args=["id", "input"]
         )
-        bad = 'root = Workspace("Quotes", "Data", [DataTable("Prices", ["Name", "Price"], [["Kite"]])])'
+        bad = 'root = Workspace("Quotes", "Data", [DataTable("Prices", ["Name", "Price"], [["Kite"]])], "quotes")'
         rejected = await wrapper(
             {"id": "tool:render_ui", "input": {"source": bad, "summary": "Quotes."}}
         )

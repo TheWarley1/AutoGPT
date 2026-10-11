@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 
 export function useFieldValidation(message: string, validateOnInput = false) {
-  const ref = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const ref = useRef<
+    HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null
+  >(null);
   const [touched, setTouched] = useState(false);
   const [composing, setComposing] = useState(false);
   useEffect(() => {
@@ -25,7 +27,9 @@ export function useFieldValidation(message: string, validateOnInput = false) {
     setComposing(false);
     setTouched(true);
   }
-  function setRef(node: HTMLInputElement | HTMLTextAreaElement | null) {
+  function setRef(
+    node: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null,
+  ) {
     ref.current = node;
     node?.setCustomValidity(message);
   }

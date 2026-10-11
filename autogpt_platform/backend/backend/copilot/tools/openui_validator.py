@@ -11,6 +11,7 @@ _TIMEOUT_SECONDS = 5
 class ValidationResult(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid")
 
+    view_id: str | None = Field(default=None, max_length=80)
     valid: bool
     error: str = Field(max_length=2000)
     summary: str = Field(default="", max_length=10_000)

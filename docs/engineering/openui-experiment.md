@@ -1,6 +1,6 @@
 # OpenUI in Copilot
 
-An integration of the [OpenUI React runtime](https://www.openui.com/docs/api-reference/react-lang) into AutoGPT's existing Copilot conversation. The model composes a bounded catalog of 24 AutoGPT components, including interactive maps, timelines, metrics, bar/line/donut charts, searchable and sortable tables, checklists, typed forms, and follow-up buttons.
+An integration of the [OpenUI React runtime](https://www.openui.com/docs/api-reference/react-lang) into AutoGPT's existing Copilot conversation. The model composes a bounded catalog of 40 AutoGPT components, including interactive maps, timelines, metrics, bar/line/donut charts, searchable and sortable tables, checklists, typed forms, and follow-up buttons.
 
 ## Native generation
 
@@ -19,7 +19,7 @@ Otto first retrieves real data through its existing tools. When an interactive v
 
 - Results render inline in the message flow, outside collapsed tool chains. There is no outer card, presentation tab, or nested vertical scroller. The renderer loads only when needed.
 - Source, version, and a plain-text summary are saved as the normal tool result. Reopening a session restores the view.
-- Edited fields and checklist selections stay in session storage for the same browser tab and exact source. They are not synced to another browser or written into the conversation until submitted.
+- New views have a stable view ID from their first render. Owner-scoped drafts sync to the backend with revision checks, and a local cache retains unsynced edits. Revisions preserve unchanged fields and stable row/task identities; explicit model changes take precedence with a notice. Older versions become read-only. Historical views without an ID retain exact-source, same-tab drafts. Edits enter the conversation only when submitted.
 - Checklist items can include `done: true` for completion the user has already reported. Saved local edits override these initial values, including an explicitly cleared checklist. Only the checklist's own count reacts to local toggles; model-written summary metrics remain a snapshot of the conversation.
 - Form submission and follow-up buttons send an ordinary user message into the same Copilot conversation. This retains the normal queue, retry, billing, and approval behavior. A button never directly executes an agent or external action.
 - Both frontend streaming implementations are supported, including AI SDK dynamic tool parts and persisted static tool parts.
@@ -37,13 +37,17 @@ Leaflet has been removed from the frontend dependency graph, rather than suppres
 
 `Timeline` shows dated or timed milestones with done/current/planned states. `TrendChart` supports ordered observations, including negative values; `DonutChart` shows category totals and percentages. Forms can combine `Field`, `SelectField`, `DateField`, and `NumberField`.
 
-Unknown numeric defaults are `null` and render blank, rather than silently becoming zero. Included unknown cost rows pause totals and submission; excluding a row is an explicit choice. Numeric fields retain the typed draft, including incomplete or invalid text, and show a local accessible warning for nonnumeric values, nonfinite numbers, bounds, and increments. Required text and date fields also show local feedback. Invalid submissions focus the first invalid control and never send a chat message. Corrected numeric values are converted to numbers immediately before submission. Drafts remain in the same browser tab; validation errors are not sent to the model. These controls only collect preferences; they do not schedule or execute work.
+Unknown numeric defaults are `null` and render blank, rather than silently becoming zero. Included unknown cost rows pause totals and submission; excluding a row is an explicit choice. Numeric fields retain the typed draft, including incomplete or invalid text, and show a local accessible warning for nonnumeric values, nonfinite numbers, bounds, and increments. Required text and date fields also show local feedback. Invalid submissions focus the first invalid control and never send a chat message. Corrected numeric values are converted to numbers immediately before submission. Drafts retain invalid input locally and sync as draft state; validation errors are not sent to the model. These controls only collect preferences; they do not schedule or execute work.
 
 `Schedule` allocates ordered tasks into supplied daily availability windows. It recalculates remaining time, capacity, free time and unscheduled work when durations, order or completion change locally. Uninterrupted tasks must fit one window; split tasks can cross breaks. Opening/deadline constraints, unavailable periods and elapsed time stay explicit. A blocked task also blocks later dependent work. Completed tasks remain visible and consume no future time. Editing availability windows requires a chat follow-up; the component does not book anything. Static `Timeline`, `Metric`, separate checklists and model-written prose remain snapshots.
 
 The saved fallback summary is generated from the validated source and the same calculation functions as the browser. Legacy caller-supplied summaries are ignored. Unknown values stay unknown in that summary, and computed totals and schedule slots agree with the initial view. This prevents a second independently written fallback from contradicting the calculation; it does not make model-written facts or static commentary correct.
 
 Describing `tool:render_ui` activates a shared allowance of twelve built-in `web_search`/`web_fetch` calls for that execution turn, including calls already attempted before activation. Re-describing the tool cannot reset it; parallel calls share the allowance. Other turns retain their normal behavior. Other browser or MCP capabilities are not covered by this counter. HTTP error responses from `web_fetch` return an error without page content, so error-page footers cannot masquerade as retrieved evidence. A successful response still needs source assessment.
+
+## Capability expansion
+
+The October 11 expansion adds connected dashboards, editable grids and calculated columns, rich result selection, ranked lists, conditional and repeated fields, typed date/time/range inputs, prose editing, task boards, dated itineraries, authenticated output cards and live execution details. See [capabilities and draft architecture](openui-capabilities.md) for contracts, boundaries and deployment requirements.
 
 ## Implementation
 

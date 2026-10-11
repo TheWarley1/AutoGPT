@@ -19,7 +19,7 @@ export function getActionFields(state: unknown, formName?: string) {
   if (!fields || typeof fields !== "object") return {};
   const result: Record<string, ActionValue> = {};
   for (const [name, field] of Object.entries(fields)
-    .filter(([name]) => !name.endsWith("__valid"))
+    .filter(([name]) => !name.endsWith("__valid") && !name.endsWith("__draft"))
     .slice(0, MAX_FORM_VALUES)) {
     const value =
       field && typeof field === "object" && "value" in field
@@ -33,13 +33,13 @@ export function getActionFields(state: unknown, formName?: string) {
 }
 
 function actionValue(value: unknown, depth = 0): ActionValue | undefined {
-  if (depth > 4) return undefined;
+  if (depth > 8) return undefined;
   if (value === null || typeof value === "boolean") return value;
-  if (typeof value === "string") return value.slice(0, 2000);
+  if (typeof value === "string") return value.slice(0, 20_000);
   if (typeof value === "number")
     return Number.isFinite(value) ? value : undefined;
   if (Array.isArray(value)) {
-    if (value.length > 12) return undefined;
+    if (value.length > 100) return undefined;
     const items = value.map((item) => actionValue(item, depth + 1));
     return items.every((item) => item !== undefined) ? items : undefined;
   }
@@ -50,19 +50,34 @@ function actionValue(value: unknown, depth = 0): ActionValue | undefined {
     ...record,
     minutes: asNumber(record.minutes),
   });
-  if (task.success) return task.data;
+  const legacyTask = Object.keys(record).every((key) =>
+    [
+      "id",
+      "title",
+      "minutes",
+      "done",
+      "splittable",
+      "earliest",
+      "deadline",
+    ].includes(key),
+  );
+  if (legacyTask && task.success) return task.data;
   const completedTask = scheduleTaskSchema
     .omit({ minutes: true })
     .safeParse(record);
-  if (completedTask.success && completedTask.data.done)
+  if (legacyTask && completedTask.success && completedTask.data.done)
     return completedTask.data;
   const cost = costRowSchema.safeParse({
     ...record,
     quantity: asNumber(record.quantity),
     unitPrice: asNumber(record.unitPrice),
   });
-  if (cost.success) return cost.data;
+  const legacyCost = Object.keys(record).every((key) =>
+    ["id", "label", "quantity", "unitPrice", "included"].includes(key),
+  );
+  if (legacyCost && cost.success) return cost.data;
   if (
+    legacyCost &&
     typeof record.id === "string" &&
     typeof record.label === "string" &&
     record.included === false &&

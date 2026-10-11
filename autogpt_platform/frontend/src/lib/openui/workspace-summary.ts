@@ -1,3 +1,5 @@
+import { interactiveText } from "./summary-interactive";
+import { sectionText } from "./summary-views";
 import type { ElementNode } from "@openuidev/lang-core";
 import { initialFields } from "./summary-fields";
 import {
@@ -18,15 +20,25 @@ export function workspaceSummary(root: ElementNode) {
 function collectText(
   value: unknown,
   fields: Map<string, Map<string, unknown>>,
+  form?: string,
 ): string[] {
   if (typeof value === "number" || typeof value === "string")
     return [String(value)];
   if (Array.isArray(value))
-    return value.flatMap((item) => collectText(item, fields));
+    return value.flatMap((item) => collectText(item, fields, form));
   if (!isRecord(value)) return [];
   if ("props" in value && "typeName" in value && isRecord(value.props)) {
     const props = value.props;
     const type = String(value.typeName);
+    if (type === "Form")
+      return [
+        String(props.title),
+        ...collectText(props.fields, fields, String(props.name)),
+      ];
+    const interactive =
+      interactiveText(type, props, form ? fields.get(form) : undefined) ??
+      sectionText(type, props, fields);
+    if (interactive) return interactive;
     if (type === "Metric")
       return [`${props.label}: ${props.value} (${props.detail})`];
     if (
@@ -115,16 +127,21 @@ function collectText(
               `${item.time}: ${item.title} (${item.status}) — ${item.detail}`,
           ),
       ];
-    return collectText(props, fields);
+    return collectText(props, fields, form);
   }
   return Object.entries(value)
     .filter(
       ([key]) =>
-        !["tone", "name", "message", "placeholder", "submitLabel"].includes(
-          key,
-        ),
+        ![
+          "tone",
+          "name",
+          "viewId",
+          "message",
+          "placeholder",
+          "submitLabel",
+        ].includes(key),
     )
-    .flatMap(([, item]) => collectText(item, fields));
+    .flatMap(([, item]) => collectText(item, fields, form));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

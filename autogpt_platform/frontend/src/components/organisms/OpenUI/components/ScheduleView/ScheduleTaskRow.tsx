@@ -13,6 +13,8 @@ interface Props {
   conflict: string;
   onMove: (direction: number) => void;
   onChange: (task: ScheduleDraft) => void;
+  children?: React.ReactNode;
+  highlighted?: boolean;
 }
 
 export function ScheduleTaskRow({
@@ -24,6 +26,8 @@ export function ScheduleTaskRow({
   conflict,
   onMove,
   onChange,
+  children,
+  highlighted,
 }: Props) {
   const id = useId();
   const { error, ...handlers } = useFieldValidation(
@@ -31,7 +35,10 @@ export function ScheduleTaskRow({
     true,
   );
   return (
-    <li className="space-y-2 border-b border-border pb-3">
+    <li
+      className={`space-y-2 border-b border-border p-3 ${highlighted ? "rounded-lg bg-muted/40" : ""}`}
+    >
+      {children}
       <label className="flex min-h-11 items-center gap-2 text-sm font-medium text-foreground">
         <input
           type="checkbox"

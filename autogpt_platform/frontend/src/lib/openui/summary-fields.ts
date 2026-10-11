@@ -1,3 +1,4 @@
+import { interactiveFields } from "./summary-interactive";
 import type { ElementNode } from "@openuidev/lang-core";
 import { Comparison, CostTable } from "./catalog-connected";
 import { Schedule } from "./catalog-schedule";
@@ -24,6 +25,7 @@ export function initialFields(root: ElementNode) {
         const props = field.props;
         const name = String(props.name);
         state.set(name, props.value);
+        interactiveFields(field as unknown as ElementNode, state);
         if (field.typeName === "Comparison") {
           const parsed = Comparison.props.parse(props);
           const selected = parsed.options.find(

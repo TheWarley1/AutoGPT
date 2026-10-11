@@ -1,3 +1,34 @@
+import { Itinerary } from "@/lib/openui/catalog-itinerary";
+import { ItineraryView } from "./components/ItineraryView/ItineraryView";
+import { DateTimeField } from "@/lib/openui/catalog-temporal";
+import { DateTimeFieldView } from "./components/InputViews/DateTimeFieldView";
+import { ExecutionView as ExecutionRenderer } from "./components/ExecutionView";
+import { Artifact, ExecutionView } from "@/lib/openui/catalog-artifacts";
+import { Dashboard, SeriesChart } from "@/lib/openui/catalog-dashboard";
+import { TaskBoard } from "@/lib/openui/catalog-tasks";
+import { ArtifactView } from "./components/ArtifactView/ArtifactView";
+import { DashboardView } from "./components/DashboardView/DashboardView";
+import { SeriesChartView } from "./components/SeriesChartView/SeriesChartView";
+import { TaskBoardView } from "./components/TaskBoardView/TaskBoardView";
+import { DocumentEditorView } from "./components/DocumentEditorView";
+import { RangeFieldView } from "./components/InputViews/RangeFieldView";
+import { DateRangeFieldView } from "./components/InputViews/DateRangeFieldView";
+import { FieldGroupView } from "./components/InputViews/FieldGroupView";
+import { SearchSelectView } from "./components/InputViews/SearchSelectView";
+import { ValidatedFieldView } from "./components/InputViews/ValidatedFieldView";
+import { RankedListView } from "./components/RankedListView";
+import { ResultListView } from "./components/ResultListView/ResultListView";
+import { DataGridView } from "./components/DataGridView/DataGridView";
+import { DataGrid } from "@/lib/openui/catalog-data";
+import { ResultList, RankedList } from "@/lib/openui/catalog-results";
+import {
+  ValidatedField,
+  SearchSelect,
+  FieldGroup,
+  DateRangeField,
+  RangeField,
+  DocumentEditor,
+} from "@/lib/openui/catalog-inputs";
 import { createLibrary, defineComponent } from "@openuidev/react-lang";
 import * as catalog from "@/lib/openui/catalog";
 import {
@@ -54,6 +85,22 @@ import {
 export const autoGPTLibrary = createLibrary({
   root: "Workspace",
   components: [
+    defineComponent({ ...Itinerary, component: ItineraryView }),
+    defineComponent({ ...DateTimeField, component: DateTimeFieldView }),
+    defineComponent({ ...ExecutionView, component: ExecutionRenderer }),
+    defineComponent({ ...Artifact, component: ArtifactView }),
+    defineComponent({ ...Dashboard, component: DashboardView }),
+    defineComponent({ ...SeriesChart, component: SeriesChartView }),
+    defineComponent({ ...TaskBoard, component: TaskBoardView }),
+    defineComponent({ ...DocumentEditor, component: DocumentEditorView }),
+    defineComponent({ ...RangeField, component: RangeFieldView }),
+    defineComponent({ ...DateRangeField, component: DateRangeFieldView }),
+    defineComponent({ ...FieldGroup, component: FieldGroupView }),
+    defineComponent({ ...SearchSelect, component: SearchSelectView }),
+    defineComponent({ ...ValidatedField, component: ValidatedFieldView }),
+    defineComponent({ ...RankedList, component: RankedListView }),
+    defineComponent({ ...ResultList, component: ResultListView }),
+    defineComponent({ ...DataGrid, component: DataGridView }),
     defineComponent({ ...catalog.Workspace, component: WorkspaceView }),
     defineComponent({ ...catalog.Metric, component: MetricView }),
     defineComponent({ ...catalog.Metrics, component: MetricsView }),

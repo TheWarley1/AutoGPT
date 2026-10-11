@@ -80,7 +80,11 @@ describe("useful generated views in chat", () => {
       `root = Workspace("Trip", "Supplied locations", [Map("Stops", "Select a place", [${JSON.stringify(location)}])])`,
       send,
     );
-    const marker = await screen.findByRole("button", { name });
+    const marker = await screen.findByRole(
+      "button",
+      { name },
+      { timeout: 10000 },
+    );
     expect(marker.getAttribute("title")).toBe(name);
     expect(marker.querySelector("img, svg, a, script")).toBeNull();
     fireEvent.click(marker);

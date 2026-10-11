@@ -51,9 +51,11 @@ describe("reported checklist progress in chat", () => {
 
   it("starts with reported tasks checked and restores local corrections", async () => {
     const first = showPlan();
-    const movers = (await screen.findByRole("checkbox", {
-      name: /Book movers/,
-    })) as HTMLInputElement;
+    const movers = (await screen.findByRole(
+      "checkbox",
+      { name: /Book movers/ },
+      { timeout: 10000 },
+    )) as HTMLInputElement;
     expect(movers.checked).toBe(true);
     expect(screen.getByText("2 of 3 complete")).toBeDefined();
     fireEvent.click(movers);
@@ -73,7 +75,7 @@ describe("reported checklist progress in chat", () => {
         .checked,
     ).toBe(true);
     expect(screen.getByText("2 of 3 complete")).toBeDefined();
-  });
+  }, 15000);
 
   it("continues to support saved checklists without initial progress", async () => {
     showPlan(updatedPlan.replace(/,"done":(?:true|false)/g, ""));

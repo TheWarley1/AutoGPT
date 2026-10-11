@@ -1,3 +1,4 @@
+import { fieldOutputs } from "./field-outputs";
 import type { ElementNode } from "@openuidev/lang-core";
 import { parseFormula } from "./formula";
 
@@ -14,24 +15,9 @@ function nodes(value: unknown): ElementNode[] {
 function formFields(form: ElementNode) {
   const fields = new Map<string, string>();
   for (const field of nodes(form.props.fields)) {
-    const name = String(field.props.name);
-    const outputs: [string, string][] = [[name, field.typeName]];
-    if (field.typeName === "Comparison")
-      outputs.push([`${name}_amount`, "number"], [`${name}_label`, "text"]);
-    if (field.typeName === "CostTable")
-      outputs.push([`${name}_total`, "number"]);
-    if (field.typeName === "Schedule") {
-      for (const suffix of [
-        "required_minutes",
-        "capacity_minutes",
-        "buffer_minutes",
-        "unscheduled_minutes",
-      ])
-        outputs.push([`${name}_${suffix}`, "number"]);
-      outputs.push([`${name}_feasible`, "boolean"]);
-    }
+    const outputs = fieldOutputs(field);
     for (const [key, kind] of outputs) {
-      if (fields.has(key) || key.endsWith("__valid"))
+      if (fields.has(key) || key.endsWith("__valid") || key.endsWith("__draft"))
         throw new Error(
           `Form ${form.props.name}: field ${key} collides with another field or a reserved name. Use unique names, including generated _amount, _label and _total fields.`,
         );
@@ -48,6 +34,48 @@ export function validateConnections(root: ElementNode) {
     const name = String(form.props.name);
     if (forms.has(name)) throw new Error(`Form names must be unique: ${name}.`);
     forms.set(name, formFields(form));
+  }
+  for (const form of all.filter((node) => node.typeName === "Form")) {
+    for (const field of nodes(form.props.fields).filter(
+      (node) => node.typeName === "FieldGroup",
+    )) {
+      const when = field.props.visibleWhen as
+        | { field: string; equals: unknown }
+        | undefined;
+      if (!when) continue;
+      const kind = forms.get(String(form.props.name))?.get(when.field);
+      const allowed =
+        typeof when.equals === "boolean"
+          ? ["ToggleField", "boolean"]
+          : ["Field", "SelectField", "DateField", "TextAreaField", "text"];
+      if (!kind || !allowed.includes(kind))
+        throw new Error(
+          `FieldGroup ${field.props.name}: condition must reference a compatible scalar field in the same Form.`,
+        );
+    }
+  }
+  for (const dashboard of all.filter((node) => node.typeName === "Dashboard")) {
+    const binding = dashboard.props.binding as
+      | { form: string; field: string }
+      | undefined;
+    if (!binding) continue;
+    const form = all.find(
+      (node) => node.typeName === "Form" && node.props.name === binding.form,
+    );
+    const grid =
+      form &&
+      nodes(form.props.fields).find(
+        (node) =>
+          node.typeName === "DataGrid" && node.props.name === binding.field,
+      );
+    if (
+      !grid ||
+      JSON.stringify(grid.props.columns) !==
+        JSON.stringify(dashboard.props.columns)
+    )
+      throw new Error(
+        "Dashboard binding must reference a DataGrid in this Workspace with exactly matching columns.",
+      );
   }
   for (const metric of all.filter(
     (node) => node.typeName === "CalculatedMetric",
@@ -67,7 +95,7 @@ export function validateConnections(root: ElementNode) {
         );
       if (
         referenceKind === "count"
-          ? kind !== "MultiSelectField"
+          ? !["MultiSelectField", "SearchSelect", "ResultList"].includes(kind)
           : !["number", "NumberField"].includes(kind)
       )
         throw new Error(

@@ -1,5 +1,7 @@
 "use client";
 
+import { useAuthStore } from "@/lib/auth/hooks/useAuthStore";
+import { DraftStatus } from "./components/DraftStatus";
 import type { RenderUIMessagePart } from "./isRenderUIPart";
 import { OpenUI } from "@/components/organisms/OpenUI/OpenUI";
 import { SavedSummary } from "./components/SavedSummary";
@@ -21,6 +23,7 @@ export function RenderUI({
   readOnly = false,
   isCurrentlyStreaming = false,
 }: Props) {
+  const ownerId = useAuthStore((state) => state.user?.id);
   const error = readUIError(part);
   if (error)
     return <RejectedUI part={part} message={error} readOnly={readOnly} />;
@@ -53,7 +56,7 @@ export function RenderUI({
   }
   return (
     <CompletedUI
-      key={part.toolCallId}
+      key={`${ownerId ?? "anonymous"}:${part.toolCallId}:${result?.source ?? ""}`}
       draftID={
         result?.session_id ? `${result.session_id}:${part.toolCallId}` : null
       }
@@ -99,12 +102,14 @@ function CompletedUI({
   );
   return (
     <ResponseFrame {...ui}>
-      {valid && (
+      <DraftStatus draft={ui.draft} />
+      {valid && ui.ready && (
         <OpenUI
           source={source}
           isStreaming={false}
-          disabled={ui.locked || ui.isSending}
-          revision={1}
+          instanceId={ui.draft.namespace}
+          disabled={ui.locked || ui.isSending || !ui.writable}
+          revision={ui.revision + 1}
           initialState={ui.initialState}
           onStateUpdate={ui.onStateUpdate}
           onAction={ui.onAction}
