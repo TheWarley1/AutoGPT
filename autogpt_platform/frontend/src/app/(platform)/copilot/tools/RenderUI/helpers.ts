@@ -1,6 +1,7 @@
 import type { RenderUIMessagePart } from "./isRenderUIPart";
 import { z } from "zod/v4";
 import { MAX_SOURCE_LENGTH } from "@/lib/openui/catalog";
+import { MAX_FORM_VALUES } from "@/lib/openui/actions";
 import { parseWorkspace } from "@/lib/openui/parse";
 import { asObject } from "../../components/ToolChain/resultHelpers";
 
@@ -71,7 +72,7 @@ export function buildUIFollowUp(
   fields: Record<string, unknown>,
 ) {
   const values = Object.entries(fields)
-    .slice(0, 24)
+    .slice(0, MAX_FORM_VALUES)
     .map(([name, value]) => [
       name.slice(0, 200),
       typeof value === "string" ? value.slice(0, 2000) : value,

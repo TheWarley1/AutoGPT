@@ -182,8 +182,10 @@ export function useCopilotStream({
   // capture these refs at init and read `.current` at fire time, so the
   // circular "useChat needs handleReconnect and useCopilotReconnect needs
   // resumeStream" is resolved by deferring both through refs.
-  const resumeStreamRef = useRef<() => void>(() => {});
-  const handleReconnectRef = useRef<() => void>(() => {});
+  const resumeStreamRef = useRef<(force?: boolean) => void>(() => {});
+  const handleReconnectRef = useRef<
+    (force?: boolean, silent?: boolean) => void
+  >(() => {});
 
   const {
     messages: rawMessages,
@@ -209,15 +211,20 @@ export function useCopilotStream({
     async function handleFinish({
       isDisconnect,
       isAbort,
+      isError,
     }: {
       isDisconnect?: boolean;
       isAbort?: boolean;
+      isError?: boolean;
     }) {
-      if (isAbort || !sessionId) return;
+      if (isAbort || isError || !sessionId) return;
       if (isUserStoppingRef.current) return;
 
-      if (isDisconnect) {
-        handleReconnectRef.current();
+      if (
+        isDisconnect ||
+        chatRuntime?.streamActivityRef.current?.finished === false
+      ) {
+        handleReconnectRef.current(false, true);
         return;
       }
 
@@ -234,7 +241,7 @@ export function useCopilotStream({
           const result = await refetchSession();
           if (!isMountedRef.current) return;
           if (hasActiveBackendStream(result)) {
-            handleReconnectRef.current();
+            handleReconnectRef.current(false, true);
             return;
           }
         }
@@ -332,7 +339,25 @@ export function useCopilotStream({
             setRateLimitMessage(limitFailure?.message || message);
           }
         },
-        onReconnect: () => handleReconnectRef.current(),
+        onReconnect: (silent) => {
+          if (!silent) {
+            handleReconnectRef.current();
+            return;
+          }
+          void refetchSession()
+            .then((result) => {
+              if (!isMountedRef.current || isUserStoppingRef.current) return;
+              if (result.data && !hasActiveBackendStream(result)) {
+                chatRuntime?.chat.clearError();
+                return;
+              }
+              handleReconnectRef.current(false, true);
+            })
+            .catch(() => {
+              if (isMountedRef.current && !isUserStoppingRef.current)
+                handleReconnectRef.current(false, true);
+            });
+        },
         isUserStoppingRef,
       });
       if (kickoffExpertId) {
@@ -429,39 +454,37 @@ export function useCopilotStream({
     }
   }
 
-  function resumeStreamFromStart() {
+  function resumeStreamFromStart(force = false) {
     if (!chatRuntime) return;
-    void chatRuntime.resumeStream(prepareResume);
+    hasResumedRef.current = true;
+    const activeMessageId =
+      chatRuntime.chat.status === "streaming" ||
+      chatRuntime.chat.status === "submitted" ||
+      chatRuntime.streamActivityRef.current?.finished === false
+        ? chatRuntime.chat.messages.at(-1)?.id
+        : undefined;
+    void chatRuntime
+      .resumeStream(() => prepareResume(activeMessageId), force)
+      .then(() => {
+        if (
+          isMountedRef.current &&
+          !isUserStoppingRef.current &&
+          chatRuntime.streamActivityRef.current?.noActiveStream
+        )
+          void refetchSession();
+      });
   }
 
-  function prepareResume() {
+  function prepareResume(activeMessageId?: string) {
     if (sessionId) {
       markCopilotChatRuntimeHealthy(sessionId);
     }
     setMessages((prev) => {
-      // The GET-resume replays the active turn from its start as a fresh
-      // assistant message, so any HYDRATED partial of that turn must be
-      // dropped first — keeping it splits one turn into two bubbles with
-      // two tool chains. Trimming only in-progress tails is not enough: a
-      // turn parked between tools (e.g. waiting on a handoff) hydrates
-      // with every persisted part already complete. Only db-hydrated
-      // messages (``-seq-N`` ids) are dropped — a streamed tail belongs
-      // to a finished turn this mount ran (continuation reconnect) and
-      // the resume will NOT replay it.
-      // The trim starts at the running turn's first hydrated message, not
-      // at the last user message: a turn the backend started on its own
-      // (engine-switch continuation) has no user row in front of it, so a
-      // user-anchored cut would also delete the completed answer above it
-      // — content the resume never replays. The turn's own opening prompt
-      // is kept (the replay does not re-emit it); every assistant row after
-      // it goes, and the cut does not stop at a user row the backend drained
-      // into the middle of the turn — leaving the pre-drain chain above it
-      // would show that chain twice. The drained row itself is kept, as a
-      // fallback bubble above the replayed assistant: the pending buffer it
-      // came from is empty, and a replay whose hint carries no text (older
-      // backend) cannot redraw it. When the hint does carry the text, the
-      // transcript draws the bubble at the drain point and drops the
-      // matching fallback row (`splitMessagesAtDrainHints`).
+      // Replay replaces the current turn, including completed text blocks
+      // before a pending tool. Keep completed earlier turns and drained user
+      // messages: replay does not emit those user rows. The explicit active
+      // message id distinguishes a disconnected turn from a finished turn
+      // whose engine continuation is now starting.
       const lastUserIndex = prev.findLastIndex((m) => m.role === "user");
       const userCut = lastUserIndex === -1 ? -1 : lastUserIndex + 1;
       const activeTurnIndex = activeTurnStartMessageId
@@ -479,7 +502,10 @@ export function useCopilotStream({
         return [...prev.slice(0, cutIndex), ...drainedFollowUps];
       }
       const last = prev[prev.length - 1];
-      return hasInProgressAssistantParts(last) ? prev.slice(0, -1) : prev;
+      return (last?.role === "assistant" && last.id === activeMessageId) ||
+        hasInProgressAssistantParts(last)
+        ? prev.slice(0, -1)
+        : prev;
     });
   }
   resumeStreamRef.current = resumeStreamFromStart;
@@ -655,6 +681,7 @@ export function useCopilotStream({
     isReconnectScheduled,
     isUserStoppingRef,
     handleReconnectRef,
+    streamActivityRef: chatRuntime?.streamActivityRef,
   });
 
   // ---------------------------------------------------------------------------
@@ -822,7 +849,7 @@ export function useCopilotStream({
       if (isUserStoppingRef.current) return;
       if (!hasActiveBackendStream(result)) return;
 
-      handleReconnectRef.current();
+      handleReconnectRef.current(true);
     }, RESTORE_STALL_TIMEOUT_MS);
 
     return () => {

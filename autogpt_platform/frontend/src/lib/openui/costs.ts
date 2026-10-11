@@ -3,8 +3,8 @@ import { costRowSchema } from "@/lib/openui/catalog-connected";
 import { asNumber } from "@/lib/openui/calculations";
 
 const draftRowSchema = costRowSchema.extend({
-  quantity: z.union([z.number(), z.string().max(100)]),
-  unitPrice: z.union([z.number(), z.string().max(100)]),
+  quantity: z.union([z.number(), z.string().max(100), z.null()]).optional(),
+  unitPrice: z.union([z.number(), z.string().max(100), z.null()]).optional(),
 });
 export type CostRowDraft = z.infer<typeof draftRowSchema>;
 

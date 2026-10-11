@@ -6,6 +6,10 @@ import { v4 as uuidv4 } from "uuid";
 
 import { getAutopilotModeChoice } from "./autopilotModeStore";
 import { createSmoothingTransform } from "./copilotStreamSmoothing";
+import {
+  trackStreamActivity,
+  type StreamActivity,
+} from "./copilotStreamActivity";
 import { getKickoffExpertIdFromMetadata } from "./expertKickoff";
 import { getCopilotAuthHeaders } from "./helpers";
 import { createShadowFetch } from "./stream/turnShadow";
@@ -26,6 +30,7 @@ interface CreateTransportArgs {
    */
   copilotModelRef: MutableValue<CopilotLlmModel | undefined>;
   streamAbortControllerRef?: MutableValue<AbortController | null>;
+  streamActivityRef?: MutableValue<StreamActivity | null>;
 }
 
 /**
@@ -61,6 +66,7 @@ export function createCopilotTransport({
   sessionId,
   copilotModelRef,
   streamAbortControllerRef,
+  streamActivityRef,
 }: CreateTransportArgs) {
   const baseUrl = `${environment.getAGPTServerBaseUrl()}/api/chat/sessions/${sessionId}/stream`;
   const streamFetch = createShadowFetch(
@@ -72,14 +78,29 @@ export function createCopilotTransport({
     api: baseUrl,
     // Tee the raw SSE into the stream converter's shadow, and in dev into the
     // token devtool, which reads the `: usage {...}` comments the SDK drops.
-    fetch: (input, init) => {
+    fetch: async (input, init) => {
       const signal = streamAbortControllerRef?.current?.signal;
-      return streamFetch(input, {
+      const activity: StreamActivity = {
+        lastReceivedAt: Date.now(),
+        finished: false,
+      };
+      if (streamActivityRef) streamActivityRef.current = activity;
+      const response = await streamFetch(input, {
         ...init,
         signal:
           signal && init?.signal
             ? AbortSignal.any([signal, init.signal])
             : (signal ?? init?.signal),
+      });
+      if (response.status === 204) {
+        activity.finished = true;
+        activity.noActiveStream = true;
+      }
+      if (!response.ok || !response.body || !streamActivityRef) return response;
+      return new Response(trackStreamActivity(response.body, activity), {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
       });
     },
     prepareSendMessagesRequest: async ({ messages }) => ({

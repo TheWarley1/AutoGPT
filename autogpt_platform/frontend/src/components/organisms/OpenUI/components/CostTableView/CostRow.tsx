@@ -1,6 +1,6 @@
 import { formatCalculated } from "@/lib/openui/calculations";
 import { CostInput } from "./CostInput";
-import { rowTotal, type CostRowDraft } from "./helpers";
+import { rowTotal, type CostRowDraft } from "@/lib/openui/costs";
 
 interface Props {
   row: CostRowDraft;

@@ -1,12 +1,12 @@
 import { useId } from "react";
 import { Input } from "@/components/atoms/Input/Input";
 import { useFieldValidation } from "../useFieldValidation";
-import { costInputError } from "./helpers";
+import { costInputError } from "@/lib/openui/costs";
 
 interface Props {
   label: string;
   kind: "quantity" | "unitPrice";
-  value: string | number;
+  value: string | number | null | undefined;
   disabled: boolean;
   onChange: (value: string) => void;
 }
@@ -26,7 +26,8 @@ export function CostInput({ label, kind, value, disabled, onChange }: Props) {
         inputMode="decimal"
         label={label}
         labelVariant="body-medium"
-        value={value}
+        value={value ?? ""}
+        placeholder="Unknown"
         disabled={disabled}
         required={!disabled}
         maxLength={100}

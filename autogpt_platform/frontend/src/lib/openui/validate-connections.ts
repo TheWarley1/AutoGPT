@@ -20,6 +20,16 @@ function formFields(form: ElementNode) {
       outputs.push([`${name}_amount`, "number"], [`${name}_label`, "text"]);
     if (field.typeName === "CostTable")
       outputs.push([`${name}_total`, "number"]);
+    if (field.typeName === "Schedule") {
+      for (const suffix of [
+        "required_minutes",
+        "capacity_minutes",
+        "buffer_minutes",
+        "unscheduled_minutes",
+      ])
+        outputs.push([`${name}_${suffix}`, "number"]);
+      outputs.push([`${name}_feasible`, "boolean"]);
+    }
     for (const [key, kind] of outputs) {
       if (fields.has(key) || key.endsWith("__valid"))
         throw new Error(

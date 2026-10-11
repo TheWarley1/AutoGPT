@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ToolUIPart } from "ai";
@@ -6,6 +6,24 @@ import { render } from "@/tests/integrations/test-utils";
 import { places, planning } from "@/lib/openui/__tests__/expanded-fixtures";
 import { CopilotChatActionsProvider } from "../../../components/CopilotChatActionsProvider/CopilotChatActionsProvider";
 import { ChainMessageParts } from "../../../components/ChatMessagesContainer/components/ChainMessageParts";
+
+const raster = vi.hoisted(() => ({
+  sources: [] as import("ol/source/Tile").default[],
+}));
+vi.mock("ol/layer/Tile", async (importActual) => {
+  const actual = await importActual<typeof import("ol/layer/Tile")>();
+  return {
+    ...actual,
+    default: class extends actual.default {
+      render() {
+        const source = this.getSource();
+        if (source && !raster.sources.includes(source))
+          raster.sources.push(source);
+        return document.createElement("div");
+      }
+    },
+  };
+});
 
 function showResult(source: string, send = vi.fn(), readOnly = false) {
   const part: ToolUIPart = {
@@ -39,7 +57,10 @@ function showResult(source: string, send = vi.fn(), readOnly = false) {
 }
 
 describe("useful generated views in chat", () => {
-  beforeEach(() => sessionStorage.clear());
+  beforeEach(() => {
+    sessionStorage.clear();
+    raster.sources.length = 0;
+  });
 
   it.each([
     '<img src=x onerror="alert(1)">',
@@ -62,12 +83,6 @@ describe("useful generated views in chat", () => {
     const marker = await screen.findByRole("button", { name });
     expect(marker.getAttribute("title")).toBe(name);
     expect(marker.querySelector("img, svg, a, script")).toBeNull();
-    fireEvent.mouseOver(marker);
-    await waitFor(() => {
-      const tooltip = document.querySelector(".leaflet-tooltip");
-      expect(tooltip?.textContent).toBe(name);
-      expect(tooltip?.querySelector("img, svg, a, script")).toBeNull();
-    });
     fireEvent.click(marker);
     expect(screen.getByText("41.89000, -87.63000")).toBeDefined();
     expect(document.querySelector("[onerror], [onload]")).toBeNull();
@@ -99,9 +114,8 @@ describe("useful generated views in chat", () => {
     const marker = await screen.findByRole("button", {
       name: "West Loop",
     });
-    const tile = document.querySelector("img.leaflet-tile");
-    expect(tile).not.toBeNull();
-    fireEvent.error(tile!);
+    await waitFor(() => expect(raster.sources.length).toBeGreaterThan(0));
+    act(() => raster.sources.at(-1)?.dispatchEvent("tileloaderror"));
     expect(await screen.findByText(/Map tiles could not load/)).toBeDefined();
     fireEvent.click(marker);
     expect(screen.getByText("Afternoon partner visit")).toBeDefined();

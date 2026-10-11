@@ -1,14 +1,8 @@
 import { useMountEffect } from "@/hooks/useMountEffect";
 import { useEffect, useRef } from "react";
+import { streamIsAlive, type StreamActivity } from "./copilotStreamActivity";
 
-/**
- * Number of ms the stream can sit in an active state with no message/part
- * activity before the watchdog assumes the SSE has silently stalled and
- * triggers a reconnect. Tuned to be long enough that legitimate quiet
- * gaps (tool calls that don't emit progress, slow model turns) don't fire
- * false positives, short enough that the user isn't staring at a dead
- * chat for minutes.
- */
+// Heartbeats count as activity even while a tool has no visible output.
 const STREAM_STALL_TIMEOUT_MS = 60_000;
 
 type UseChatStatus = "submitted" | "streaming" | "ready" | "error";
@@ -32,19 +26,10 @@ interface UseStreamActivityWatchdogArgs {
    * existing reconnect cascade (toast + exponential backoff + 30 s forced
    * idle), so the UI can never get stuck on a dead stream.
    */
-  handleReconnectRef: React.MutableRefObject<() => void>;
+  handleReconnectRef: React.MutableRefObject<(force?: boolean) => void>;
+  streamActivityRef?: React.MutableRefObject<StreamActivity | null>;
 }
 
-/**
- * Detect silent SSE stalls.
- *
- * AI SDK only surfaces ``onFinish`` / ``onError`` when the underlying
- * fetch resolves or rejects. If the stream sits open with heartbeats but
- * no data events (backend stuck, Redis zombie, etc.), neither callback
- * fires and the UI stays in ``streaming`` / ``submitted`` state forever.
- * This hook closes the gap by resetting an internal timer on every
- * activity tick and calling ``handleReconnect`` when the timer elapses.
- */
 export function useStreamActivityWatchdog({
   sessionId,
   status,
@@ -52,6 +37,7 @@ export function useStreamActivityWatchdog({
   isReconnectScheduled,
   isUserStoppingRef,
   handleReconnectRef,
+  streamActivityRef,
 }: UseStreamActivityWatchdogArgs) {
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -64,10 +50,15 @@ export function useStreamActivityWatchdog({
     if (isReconnectScheduled) return;
     if (isUserStoppingRef.current) return;
 
-    timerRef.current = setTimeout(() => {
+    function checkActivity() {
       if (isUserStoppingRef.current) return;
-      handleReconnectRef.current();
-    }, STREAM_STALL_TIMEOUT_MS);
+      if (streamIsAlive(streamActivityRef, STREAM_STALL_TIMEOUT_MS)) {
+        timerRef.current = setTimeout(checkActivity, STREAM_STALL_TIMEOUT_MS);
+        return;
+      }
+      handleReconnectRef.current(true);
+    }
+    timerRef.current = setTimeout(checkActivity, STREAM_STALL_TIMEOUT_MS);
 
     return () => {
       clearTimeout(timerRef.current);
@@ -80,6 +71,7 @@ export function useStreamActivityWatchdog({
     isReconnectScheduled,
     isUserStoppingRef,
     handleReconnectRef,
+    streamActivityRef,
   ]);
 
   useMountEffect(() => {

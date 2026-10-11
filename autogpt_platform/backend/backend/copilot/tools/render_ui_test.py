@@ -25,7 +25,10 @@ from backend.copilot.sdk.tool_adapter import (
 from backend.copilot.tools import TOOL_REGISTRY, get_available_tools, render_ui
 from backend.copilot.tools._test_data import make_session
 from backend.copilot.tools.models import ResponseType
-from backend.copilot.tools.openui_validator import ValidatorUnavailable
+from backend.copilot.tools.openui_validator import (
+    ValidationResult,
+    ValidatorUnavailable,
+)
 from backend.util.tool_call_loop import LLMToolCall
 
 SOURCE = 'root = Workspace("Revenue", "From the uploaded report", [Metrics([Metric("Revenue", "$42,000", "Q3", "positive")])])'
@@ -184,7 +187,7 @@ async def test_render_ui_returns_a_persistable_result():
     payload = json.loads(result.model_dump_json())
     assert payload["type"] == "ui_rendered"
     assert payload["source"] == SOURCE
-    assert payload["message"] == "Revenue was $42,000 in Q3."
+    assert "Revenue: $42,000 (Q3)" in payload["message"]
     assert payload["session_id"] == session.session_id
     assert payload["version"] == 1
 
@@ -264,6 +267,38 @@ async def test_validator_outage_returns_text_guidance_without_publishing(
     )
     assert result.type == ResponseType.ERROR
     assert "plain text" in result.message
+    assert "source" not in result.model_dump()
+
+
+@pytest.mark.asyncio
+async def test_missing_canonical_summary_does_not_publish_a_view(
+    render_ui_tool, monkeypatch
+):
+    monkeypatch.setattr(
+        render_ui,
+        "validate_openui_source",
+        AsyncMock(return_value=ValidationResult(valid=True, error="", summary="")),
+    )
+    result = await render_ui_tool._execute(
+        "owner", make_session("owner"), source=SOURCE, summary="Unvalidated fallback."
+    )
+    assert result.type == ResponseType.ERROR
+    assert "plain text" in result.message
+    assert "source" not in result.model_dump()
+    assert "Unvalidated fallback" not in result.message
+
+
+@pytest.mark.asyncio
+async def test_summary_expansion_cannot_exceed_the_tool_output_byte_limit(
+    render_ui_tool,
+):
+    source = 'root = Workspace("Large", "' + "漢" * 15_000 + '", [])'
+    assert len(source.encode()) < 70_000
+    result = await render_ui_tool._execute(
+        "owner", make_session("owner"), source=source
+    )
+    assert result.type == ResponseType.ERROR
+    assert "too large" in result.message
     assert "source" not in result.model_dump()
 
 

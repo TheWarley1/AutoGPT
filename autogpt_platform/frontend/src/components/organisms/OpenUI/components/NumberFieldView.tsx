@@ -33,6 +33,7 @@ export function NumberFieldView({
         inputMode="decimal"
         data-openui-number
         value={field.value}
+        placeholder="Unknown"
         maxLength={100}
         onChange={(event) => field.setValue(event.target.value)}
         aria-invalid={!!error}

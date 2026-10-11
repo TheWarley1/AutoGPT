@@ -13,7 +13,7 @@ describe("useful OpenUI components", () => {
   it("keeps locations and typed field defaults in the text alternative", () => {
     expect(workspaceText(places)).toContain("River North");
     expect(workspaceText(places)).toContain("41.8924");
-    expect(workspaceText(planning)).toContain("Travel mode: walking");
+    expect(workspaceText(planning)).toContain("Travel mode: Walking");
     expect(workspaceText(planning)).toContain("Budget: 100");
   });
 

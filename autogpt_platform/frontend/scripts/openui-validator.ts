@@ -1,4 +1,5 @@
 import { parseWorkspace } from "../src/lib/openui/parse";
+import { workspaceSummary } from "../src/lib/openui/workspace-summary";
 
 async function main() {
   const chunks: Buffer[] = [];
@@ -10,8 +11,14 @@ async function main() {
     chunks.push(data);
   }
   try {
-    parseWorkspace(Buffer.concat(chunks).toString("utf8"));
-    process.stdout.write(JSON.stringify({ valid: true, error: "" }));
+    const root = parseWorkspace(Buffer.concat(chunks).toString("utf8"));
+    process.stdout.write(
+      JSON.stringify({
+        valid: true,
+        error: "",
+        summary: workspaceSummary(root),
+      }),
+    );
   } catch (error) {
     process.stdout.write(
       JSON.stringify({

@@ -30,6 +30,8 @@ import { TrendChartView } from "./components/TrendChartView";
 import { DonutChartView } from "./components/DonutChartView";
 import { SelectFieldView, DateFieldView } from "./components/TypedFieldViews";
 import { NumberFieldView } from "./components/NumberFieldView";
+import { Schedule } from "@/lib/openui/catalog-schedule";
+import { ScheduleView } from "./components/ScheduleView/ScheduleView";
 import {
   Comparison,
   CostTable,
@@ -71,6 +73,7 @@ export const autoGPTLibrary = createLibrary({
     defineComponent({ ...DateField, component: DateFieldView }),
     defineComponent({ ...Comparison, component: ComparisonView }),
     defineComponent({ ...CostTable, component: CostTableView }),
+    defineComponent({ ...Schedule, component: ScheduleView }),
     defineComponent({ ...CalculatedMetric, component: CalculatedMetricView }),
     defineComponent({ ...TextAreaField, component: TextAreaFieldView }),
     defineComponent({ ...ToggleField, component: ToggleFieldView }),

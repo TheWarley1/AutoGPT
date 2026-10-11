@@ -70,6 +70,7 @@ it("replaces a stalled POST with one resume, renders its form, and still accepts
     }),
     http.get(url, ({ request }) => {
       resumes++;
+      server.use(sessionHandler());
       return streamSseResponse(
         [
           { type: "start", messageId: "resumed-ui" },
@@ -127,7 +128,6 @@ it("replaces a stalled POST with one resume, renders its form, and still accepts
   expect(posts).toBe(1);
   expect(resumes).toBe(1);
   expect(screen.queryByText("Old answer")).toBeNull();
-  server.use(sessionHandler());
   await waitFor(() => expect(runtime.chat.status).toBe("ready"));
   await typeAndSend("Continue in this chat");
   await screen.findByText("Follow-up received", undefined, { timeout: 10000 });

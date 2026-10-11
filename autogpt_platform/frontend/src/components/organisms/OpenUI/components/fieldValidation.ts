@@ -2,7 +2,7 @@ interface NumberConstraints {
   min?: number | null;
   max?: number | null;
   step: number;
-  value: number;
+  value?: number | null;
 }
 
 export function numberFieldError(raw: string, props: NumberConstraints) {
@@ -15,7 +15,7 @@ export function numberFieldError(raw: string, props: NumberConstraints) {
     return `Enter ${props.min} or more.`;
   if (props.max != null && value > props.max)
     return `Enter ${props.max} or less.`;
-  const base = props.min ?? props.value;
+  const base = props.min ?? props.value ?? 0;
   const steps = (value - base) / props.step;
   if (Math.abs(steps - Math.round(steps)) > 1e-8)
     return `Use increments of ${props.step} starting at ${base}.`;
@@ -27,8 +27,8 @@ export function validateForm(form: HTMLFormElement) {
   const fields = form.querySelectorAll<
     HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
   >("input, textarea, select");
-  Array.from(fields)
-    .find((field) => !field.validity.valid)
-    ?.focus();
+  const invalid = Array.from(fields).find((field) => !field.validity.valid);
+  invalid?.focus({ preventScroll: true });
+  invalid?.scrollIntoView({ block: "center", behavior: "instant" });
   return false;
 }

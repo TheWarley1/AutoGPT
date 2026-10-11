@@ -1,4 +1,5 @@
 import { toast } from "@/components/molecules/Toast/use-toast";
+import { UIMessageStreamError } from "ai";
 
 import {
   describeProviderFailure,
@@ -155,7 +156,7 @@ interface HandleStreamErrorArgs {
     providerFailure?: ProviderFailure,
     origin?: UsageLimitOrigin,
   ) => void;
-  onReconnect: () => void;
+  onReconnect: (silent?: boolean) => void;
   isUserStoppingRef: React.MutableRefObject<boolean>;
   /**
    * The typed envelope, when this turn sent one. It is the only source here
@@ -174,7 +175,7 @@ interface HandleStreamErrorArgs {
  *  1. `[code:<id>]` backend prefix → curated or generic backend toast.
  *  2. Legacy `usage limit` substring → rate-limit UI via `onRateLimit`.
  *  3. Legacy 401 / auth failure → auth-error toast.
- *  4. TypeError / AbortError / "connection interrupted" → reconnect.
+ *  4. Protocol gaps reconnect silently; network and abort errors reconnect.
  *  5. Anything else silently falls through (the AI-SDK also surfaces
  *     `error` into the hook's `error` return, which drives the inline
  *     error banner).
@@ -264,6 +265,10 @@ export function handleStreamError({
   // 4. Transient network / abort — reconnect so the "Try Again" affordance
   // (persisted retryable-error marker on the session) lights up.
   if (isUserStoppingRef.current) return;
+  if (UIMessageStreamError.isInstance(error)) {
+    onReconnect(true);
+    return;
+  }
   const isNetworkError =
     error.name === "TypeError" || error.name === "AbortError";
   const isTransientApiError = errorDetail.includes("connection interrupted");

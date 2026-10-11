@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { placeCoordinates, validLocations } from "./helpers";
-import { createPlaceMarker } from "./leafletHelpers";
+import { createPlaceMarker } from "./mapHelpers";
 
 const place = {
   name: "Place",
@@ -31,11 +31,12 @@ describe("geographic map data", () => {
     const name = '<img src=x onerror="alert(1)">';
     const [point] = placeCoordinates([{ index: 4, place: { ...place, name } }]);
     const marker = createPlaceMarker(point, onSelect);
-    const content = marker.getTooltip()?.getContent();
+    const content = marker.getElement();
     expect(content).toBeInstanceOf(HTMLElement);
-    expect((content as HTMLElement).textContent).toBe(name);
+    expect(content?.getAttribute("aria-label")).toBe(name);
+    expect(content?.getAttribute("title")).toBe(name);
     expect((content as HTMLElement).querySelector("img")).toBeNull();
-    marker.fire("click");
+    content?.click();
     expect(onSelect).toHaveBeenCalledWith(4);
   });
 });

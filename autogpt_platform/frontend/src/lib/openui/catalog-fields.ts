@@ -1,6 +1,7 @@
 import { defineComponent } from "@openuidev/lang-core";
 import { z } from "zod/v4";
 import { Comparison, CostTable } from "./catalog-connected";
+import { Schedule } from "./catalog-schedule";
 import {
   TextAreaField,
   ToggleField,
@@ -44,17 +45,19 @@ export const DateField = defineComponent({
 export const NumberField = defineComponent({
   name: "NumberField",
   description:
-    "A numeric input inside a Form. Provide a numeric initial value, minimum/maximum (null if unbounded), and a positive step. The initial value must satisfy those constraints.",
+    "A numeric input inside a Form. Use null for an unknown initial value: it stays blank and dependent calculations pause until supplied. Never substitute 0 for missing data. Provide minimum/maximum (null if unbounded) and a positive step. Known initial values must satisfy those constraints.",
   props: z
     .object({
       name: z.string(),
       label: z.string(),
-      value: z.number(),
+      value: z.number().nullable().optional(),
       min: z.number().nullable().optional(),
       max: z.number().nullable().optional(),
       step: z.number().positive(),
     })
     .refine(({ value, min, max, step }) => {
+      if (min != null && max != null && min > max) return false;
+      if (value == null) return true;
       if (min != null && value < min) return false;
       if (max != null && value > max) return false;
       if (min == null) return true;
@@ -94,6 +97,7 @@ export const Form = defineComponent({
           NumberField.ref,
           Comparison.ref,
           CostTable.ref,
+          Schedule.ref,
           TextAreaField.ref,
           ToggleField.ref,
           MultiSelectField.ref,

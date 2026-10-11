@@ -106,20 +106,13 @@ describe.each(STREAM_PATHS)("on the %s path", (path) => {
             missingWhileRunning,
             quietMs: 8000,
           }),
-          // AI SDK: the parser throws on the orphan delta and every reconnect
-          // replays the same head, so nothing of the running turn renders and
-          // the reconnects announce "Connection lost". Only the turn's end
-          // repairs the transcript, from the rows.
+          // AI SDK: the parser cannot restore the orphan delta. Only the
+          // turn's end repairs the transcript from the rows.
           // Runtime: the trimmed stream names no checkpoint, so there is no
           // seed to tail from; it shows the rows until the turn ends, silently.
           // A backend with L0 never trims a running turn, so this needs a
           // stream the length cap cut.
-          {
-            today:
-              path === "stream runtime"
-                ? ["missingWhileRunning"]
-                : ["connectionToast", "missingWhileRunning"],
-          },
+          { today: ["missingWhileRunning"] },
         );
       },
     );

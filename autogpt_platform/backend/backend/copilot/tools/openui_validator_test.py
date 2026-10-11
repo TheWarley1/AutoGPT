@@ -68,7 +68,7 @@ async def test_timeout_and_cancellation_reap_the_process(monkeypatch, error):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "code, output", [(1, b""), (0, b"not json"), (0, b"{}"), (0, b"x" * 8193)]
+    "code, output", [(1, b""), (0, b"not json"), (0, b"{}"), (0, b"x" * 65_537)]
 )
 async def test_bad_validator_responses_fail_closed(monkeypatch, code, output):
     process = MagicMock(returncode=code)
@@ -94,3 +94,29 @@ async def test_source_only_enters_stdin_and_node_options_are_not_inherited(monke
     assert source not in spawn.call_args.args
     assert "NODE_OPTIONS" not in spawn.call_args.kwargs["env"]
     assert process.communicate.call_args.args == (source.encode(),)
+
+
+@pytest.mark.asyncio
+async def test_process_start_failure_is_unavailable(monkeypatch):
+    monkeypatch.setattr(
+        openui_validator.asyncio,
+        "create_subprocess_exec",
+        AsyncMock(side_effect=OSError("cannot spawn")),
+    )
+    with pytest.raises(openui_validator.ValidatorUnavailable, match="Cannot start"):
+        await openui_validator.validate_openui_source("unused")
+
+
+@pytest.mark.asyncio
+async def test_timeout_reaps_a_process_that_exits_before_kill(monkeypatch):
+    process = MagicMock(returncode=None)
+    process.communicate = AsyncMock(side_effect=[TimeoutError(), (b"", b"")])
+    process.kill.side_effect = ProcessLookupError()
+    monkeypatch.setattr(
+        openui_validator.asyncio,
+        "create_subprocess_exec",
+        AsyncMock(return_value=process),
+    )
+    with pytest.raises(openui_validator.ValidatorUnavailable, match="timed out"):
+        await openui_validator.validate_openui_source("unused")
+    assert process.communicate.await_count == 2

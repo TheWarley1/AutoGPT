@@ -1,6 +1,6 @@
 "use client";
 
-import "leaflet/dist/leaflet.css";
+import "ol/ol.css";
 import type { IndexedLocation } from "./helpers";
 import { useMapCanvas } from "./useMapCanvas";
 
@@ -28,6 +28,7 @@ export function MapCanvas({
         ref={containerRef}
         className="h-72 w-full bg-zinc-100 sm:h-80"
         aria-label={`${title} map`}
+        tabIndex={0}
       />
       {error && (
         <p

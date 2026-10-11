@@ -19,3 +19,19 @@ Recorded sources can be checked from `autogpt_platform/frontend` using `scripts/
 `reliability-journeys.jsonl` expands the October 10 regression work to 32 scenarios and 50 turns per pass: 20 development cases and 12 held out. Known bike-warranty, SF access, changed-commute and scheduling failures are explicitly development cases. Additional variants exercise shared headcount across charges, refundable deposits, capacity versus accessibility, unknown prices, retained map/checklist progress, multiple alternatives, quoted instructions and plain-text requests. These extend existing task families; repeated runs and newly worded variants are not new independent use cases.
 
 The frozen design runs the baseline once, each development candidate twice and the selected candidate's held-out cases twice. Review all published views and prose against every criterion, test both A/B values and change shared numeric inputs by one. Default totals alone cannot establish that a form is connected correctly. Keep completion, UI choice, canonical validity and task correctness separate; retain failed attempts and collection errors. The Desktop collection `OpenUI-reliability-2026-10-10` contains the protocol, case lineage, raw sessions, explicit judgments, candidate fingerprints, formula checks, browser evidence and final report.
+
+
+`correctness-journeys.jsonl` retains all 32 prior reliability scenarios as development regressions and adds twelve final-check scenarios, for **44 scenarios and 65 turns**. `prior_split` and `origin` preserve lineage; prior held-out cases are now development cases, not fresh evidence. New cases cover unknown recurring costs, fractional shared quantities, interrupted work, opening windows, deadlines, unsupported warranty claims, missing data and simple text-only requests.
+
+The frozen design uses two fresh sessions per case and candidate. Select using the 32 development cases, then run the twelve final-check cases after freezing the selected candidate. Preserve every accepted turn, including failures; reconnect an accepted session instead of resubmitting it. Review component choice, completion, canonical validity, correct calculations and all task criteria separately. The implementing agent authored and judges these cases; the final check is held apart from tuning, not independent or blinded. The Desktop collection `OpenUI-correctness-2026-10-10` retains frozen criteria, source fingerprints, raw visible outputs, explicit reviews, scripts and browser evidence. Previous-round baseline results are historical, not a simultaneous matched control.
+
+Recorded correctness-round results: three repeated development candidates scored
+58/64, 57/64 and 58/64 strict journeys. The selected generation policy plus a
+deterministic schedule-summary fix passed 20/24 reserved journeys, with 26/30
+appropriate UI choices and 23/23 canonically valid views. The four strict failures
+were unnecessary UI in two repeated feasibility scenarios; arithmetic was correct.
+All 14 positive final episodes passed. A separate targeted museum regression passed
+one of two full journeys despite both showing the corrected capacity distinction;
+the other generated an inaccurate rounded alternative. The complete collection has
+218 recorded episodes and 334 user turns. These are exploratory results, with
+explicit remaining model failures and no demonstrated overall development gain.

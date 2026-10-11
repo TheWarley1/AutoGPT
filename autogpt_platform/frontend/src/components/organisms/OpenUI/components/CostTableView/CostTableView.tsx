@@ -6,7 +6,7 @@ import { useOpenUIDisabled } from "../../interactionContext";
 import { useFieldView } from "../useFieldView";
 import { useDerivedField } from "../useDerivedField";
 import { CostRow } from "./CostRow";
-import { costTotal, readCostRows, type CostRowDraft } from "./helpers";
+import { costTotal, readCostRows, type CostRowDraft } from "@/lib/openui/costs";
 
 export function CostTableView({
   props,

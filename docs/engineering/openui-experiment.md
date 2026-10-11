@@ -1,6 +1,6 @@
 # OpenUI in Copilot
 
-An integration of the [OpenUI React runtime](https://www.openui.com/docs/api-reference/react-lang) into AutoGPT's existing Copilot conversation. The model composes a bounded catalog of 23 AutoGPT components, including interactive maps, timelines, metrics, bar/line/donut charts, searchable and sortable tables, checklists, typed forms, and follow-up buttons.
+An integration of the [OpenUI React runtime](https://www.openui.com/docs/api-reference/react-lang) into AutoGPT's existing Copilot conversation. The model composes a bounded catalog of 24 AutoGPT components, including interactive maps, timelines, metrics, bar/line/donut charts, searchable and sortable tables, checklists, typed forms, and follow-up buttons.
 
 ## Native generation
 
@@ -31,20 +31,26 @@ Otto first retrieves real data through its existing tools. When an interactive v
 
 `Map` displays up to 50 supplied locations with numbered, keyboard-accessible markers, zoom controls, category/text filtering, a matching place list, and selected-place details. **Discuss this place** submits that location's name, coordinates, category, and detail through the existing conversation. Selection survives a reload in the same tab. Map exploration remains available in shared conversations; discussion actions are disabled there.
 
-The Leaflet bundle loads only for a completed map. Basemap tiles come from OpenStreetMap with visible attribution and browser caching, following its [tile policy](https://operations.osmfoundation.org/policies/tiles/). The map does not request geolocation, geocode addresses, calculate routes, or prefetch offline tiles. Coordinates must come from the user or tools. Place names and details are rendered as text and are not sent to the tile service. If tiles fail, the searchable list and conversation actions remain usable. Review the tile provider's capacity and terms before a broader deployment.
+The OpenLayers bundle loads only for a completed map. Basemap tiles come from OpenStreetMap with visible attribution and browser caching, following its [tile policy](https://operations.osmfoundation.org/policies/tiles/). The map does not request geolocation, geocode addresses, calculate routes, or prefetch offline tiles. Coordinates must come from the user or tools. Place names and details are rendered as text and are not sent to the tile service. If tiles fail, the searchable list and conversation actions remain usable. Review the tile provider's capacity and terms before a broader deployment.
 
-Leaflet's [CVE-2025-69993 advisory](https://security.snyk.io/vuln/SNYK-JS-LEAFLET-16427276) covers passing untrusted HTML strings to its popup or tooltip APIs; Snyk lists no fixed version. This integration passes a DOM element populated with `textContent` to `bindTooltip`, uses a DOM element for marker icons, and never calls `bindPopup`. The only HTML string is the fixed OpenStreetMap attribution. This follows the [maintainers' documented mitigation](https://github.com/Leaflet/Leaflet/issues/10214). Integration tests open actual Leaflet tooltips through the chat renderer with image-event, SVG-event, attribute-breakout, and JavaScript-link payloads, and verify that the payloads remain literal text with no injected elements or event handlers. These application safeguards do not change Snyk's package-level finding.
+Leaflet has been removed from the frontend dependency graph, rather than suppressing its [CVE-2025-69993 advisory](https://security.snyk.io/vuln/SNYK-JS-LEAFLET-16427276). OpenLayers renders the basemap; numbered markers are native buttons populated with `textContent` and text attributes. Tests pass image-event, SVG-event, attribute-breakout and JavaScript-link payloads through the real chat renderer and verify literal text without injected elements or handlers. Unit integration tests replace only the raster canvas boundary; live browser checks exercise actual tiles and canvas rendering.
 
 `Timeline` shows dated or timed milestones with done/current/planned states. `TrendChart` supports ordered observations, including negative values; `DonutChart` shows category totals and percentages. Forms can combine `Field`, `SelectField`, `DateField`, and `NumberField`.
 
-Numeric fields retain the typed draft, including incomplete or invalid text, and show a local accessible warning for nonnumeric values, nonfinite numbers, bounds, and increments. Required text and date fields also show local feedback. Invalid submissions focus the first invalid control and never send a chat message. Corrected numeric values are converted to numbers immediately before submission. Drafts remain in the same browser tab; validation errors are not sent to the model. These controls only collect preferences; they do not schedule or execute work.
+Unknown numeric defaults are `null` and render blank, rather than silently becoming zero. Included unknown cost rows pause totals and submission; excluding a row is an explicit choice. Numeric fields retain the typed draft, including incomplete or invalid text, and show a local accessible warning for nonnumeric values, nonfinite numbers, bounds, and increments. Required text and date fields also show local feedback. Invalid submissions focus the first invalid control and never send a chat message. Corrected numeric values are converted to numbers immediately before submission. Drafts remain in the same browser tab; validation errors are not sent to the model. These controls only collect preferences; they do not schedule or execute work.
+
+`Schedule` allocates ordered tasks into supplied daily availability windows. It recalculates remaining time, capacity, free time and unscheduled work when durations, order or completion change locally. Uninterrupted tasks must fit one window; split tasks can cross breaks. Opening/deadline constraints, unavailable periods and elapsed time stay explicit. A blocked task also blocks later dependent work. Completed tasks remain visible and consume no future time. Editing availability windows requires a chat follow-up; the component does not book anything. Static `Timeline`, `Metric`, separate checklists and model-written prose remain snapshots.
+
+The saved fallback summary is generated from the validated source and the same calculation functions as the browser. Legacy caller-supplied summaries are ignored. Unknown values stay unknown in that summary, and computed totals and schedule slots agree with the initial view. This prevents a second independently written fallback from contradicting the calculation; it does not make model-written facts or static commentary correct.
+
+Describing `tool:render_ui` activates a shared allowance of twelve built-in `web_search`/`web_fetch` calls for that execution turn, including calls already attempted before activation. Re-describing the tool cannot reset it; parallel calls share the allowance. Other turns retain their normal behavior. Other browser or MCP capabilities are not covered by this counter. HTTP error responses from `web_fetch` return an error without page content, so error-page footers cannot masquerade as retrieved evidence. A successful response still needs source assessment.
 
 ## Implementation
 
 - `frontend/src/lib/openui/catalog.ts`, `catalog-sections.ts`, and `catalog-fields.ts` define the canonical Zod catalog. Run `pnpm generate:openui` in the frontend to update `backend/backend/copilot/tools/openui_library.txt`. A contract test checks exact parity; `pnpm generate:openui --check` verifies it without writing.
 - `backend/copilot/tools/render_ui.py` requires authentication and matching session ownership, bounds inputs, and returns a versioned result. It caps encoded output below the existing truncation thresholds. A bounded lexical preflight rejects unfinished or mismatched delimiters, then the bundled canonical parser validates syntax, component schemas, and references before publication. Invalid programs return repairable tool errors; the browser repeats validation before rendering. The backend parses the program without rendering it or executing generated code.
 - `backend/copilot/openui_prompt.py` contains task-to-view guidance. It asks the model to verify dated plans, reconcile totals and dependencies, invalidate derived values after constraint changes, preserve reported progress, and use ordinary text or clarification when an interactive view adds no value. Guidance does not guarantee factual correctness or valid programs.
-- `frontend/src/components/organisms/OpenUI` maps the real OpenUI renderer to AutoGPT primitives, Recharts, and Leaflet. No generated JavaScript, HTML, arbitrary components, or tool execution is enabled. Completed programs containing queries or mutations are rejected, and component props are validated against the canonical Zod schemas, including geographic bounds and typed field defaults.
+- `frontend/src/components/organisms/OpenUI` maps the real OpenUI renderer to AutoGPT primitives, Recharts, and OpenLayers. No generated JavaScript, HTML, arbitrary components, or tool execution is enabled. Completed programs containing queries or mutations are rejected, and component props are validated against the canonical Zod schemas, including geographic bounds and typed field defaults.
 - `frontend/src/app/(platform)/copilot/tools/RenderUI` handles native result rendering, drafts, summary fallback, and conversation follow-ups.
 - Existing `/copilot` authentication and shared-session rules apply; no new protected prefix is introduced.
 - OpenUI is pinned at `0.3.0`. Both Next.js bundlers alias upstream's automatic development widget to a local no-op, avoiding its CDN script and promotional injection while preserving the renderer.
@@ -229,3 +235,92 @@ availability and rounded break-even claims outside the narrow frozen rubric.
 H03 does not specify the participants in a later joint review after one presenter
 leaves; its pass criteria establish rehearsal timing, not attendance at that
 review. These limitations are retained in the report and protocol disclosures.
+
+### October 11: computed plans, unknown inputs and recovery
+
+The component catalog now has 24 components. `Schedule` is an editable sequential
+plan with shared browser and saved-summary calculations, rather than a model-written
+set of independent time and buffer labels. It preserves completed history, keeps
+closures and elapsed time out of availability, handles splitting and deadlines,
+and separately reports capacity shortfall, unscheduled whole tasks and unused time.
+A 265-minute museum plan in a 180-minute window can be 85 minutes over capacity
+while leaving 95 minutes unscheduled and ten minutes unused. That distinction now
+appears in both the inline view and its generated text fallback.
+
+Unknown numeric defaults and prices remain blank and pause dependent totals.
+Excluded invalid cost rows and completed invalid-duration drafts do not forward
+invalid numeric strings to the model. Form submission retains all six allowed
+Schedules and their derived values. The saved summary is generated by the same
+validated catalog and calculators; caller-provided summaries no longer introduce
+independent arithmetic. Source and encoded response limits remain enforced.
+
+Leaflet and its type package have been removed, with OpenLayers providing actual
+tiles, projection, attribution and native text-only marker buttons. Browser checks
+covered a real map, selection, local validation, reload and a live schedule follow-up
+inside the same conversation. Small-screen session controls now occupy their own
+row above the message scroll area. Native iOS and Android were unavailable on this
+host; these are 390px Chromium checks. Lower floating chat controls can still cover
+scrolled content.
+
+The AI SDK stream path now coalesces repeated resume requests, drains a replaced
+connection before replay, and counts raw heartbeat traffic as activity. Normal
+continuations and repairable protocol gaps reconnect quietly; explicit backend
+errors remain visible. If replay returns 204 after the backend has finished, the
+client refreshes the persisted conversation instead of losing the answer. A trimmed
+head can still omit content while a turn is running; persisted rows repair it after
+completion. These changes do not fix failed server persistence or upstream provider
+errors.
+
+Interactive research now has the scoped execution allowance described above, and
+failed HTTP retrievals no longer expose error-page content as evidence. The new
+correctness collection expands the previous reliability cases and records every
+candidate, accepted failure and final-check judgment. Results and verification for
+this iteration follow below.
+
+The frozen correctness collection contains **44 scenarios and 65 prompt turns**:
+32 development regressions and 12 reserved scenarios. Three candidates ran twice
+per development case, with strict scores **58/64, 57/64 and 58/64**. Candidate three
+plus the deterministic shortfall display fix was selected before the final check.
+There is no demonstrated aggregate gain between development candidates.
+
+The selected final candidate passed **20/24 reserved journeys**: all 14 positive
+episodes, six of eight negatives and neither of two boundary episodes. All 30 turns
+produced terminal replies; 26 chose UI/text appropriately. All 23 published views
+passed canonical validation, their saved summaries matched, and both fractional
+shared-price probes passed at the original and changed headcount. Both fragmented
+workshop cases and both impossible-inventory cases produced unnecessary OpenUI
+under the frozen rubric; arithmetic was correct. The workshop cases also omitted
+constraint clarification. The impossible-inventory prompt explicitly requests UI,
+so its no-UI expectation is an authored product judgment, retained consistently.
+
+The targeted museum regression verified the corrected85/95/10-minute display in
+both repeats, but only one of two full journeys passed: the other suggested about
+47 minutes per museum and claimed the revised alternative fits 180 minutes, despite
+47 × 3 + 40 = 181. Other retained limitations include model-locked fields, lost completion
+state in development, an unrequested uninterrupted-analysis assumption in both
+final work revisions, and static copy that can become stale after local edits.
+One development SF turn ended with an API 409 accepted-request error; its
+failed sample remains. The other candidate-three SF journey preserved the bridge,
+cable car and two museums, then the historic-rail accessibility alternative, with
+unverified routing details disclosed.
+
+The Desktop collection `OpenUI-correctness-2026-10-10` records 218 episodes and 334
+user turns, not 218 distinct scenarios. It includes frozen criteria and selection,
+all source snapshots, explicit judgments, initial collection errors, browser
+screenshots, verification logs and a searchable HTML report. Judging was unblinded
+by the implementing agent. Sessions share normal account/workspace skill storage,
+so fresh sessions do not exclude carryover. Earlier collections remain unchanged.
+
+Final frontend verification passed 235 tests with one expected drift failure across
+29 files, after lint, types and artifact parity. Backend verification passed 535
+focused tests; 47 publication/validator/research tests were rerun after the final
+artifact change. Whole-tree backend formatting retains the three unchanged
+vendored Playwright import errors; scoped Pyright passed.
+
+The broad local frontend attempt is not claimed clean: it observed two failures
+before their fixes and then hit a coverage-output collision between concurrent
+runs. A later focused recovery case timed out, passed two unchanged isolated
+reruns, and its fixture was corrected to report the backend idle when serving the
+finished replay instead of waiting for UI rendering. The final focused suite uses
+an isolated coverage directory and passes. All failed attempts remain in the
+Desktop evidence. Fresh remote CI and cloud preview verification remain required.

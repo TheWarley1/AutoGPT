@@ -4,7 +4,7 @@ import {
   placeCoordinates,
   type IndexedLocation,
 } from "./helpers";
-import { createMap, selectPlace } from "./leafletHelpers";
+import { createMap, selectPlace } from "./mapHelpers";
 
 export function useMapCanvas(
   locations: IndexedLocation[],

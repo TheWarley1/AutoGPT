@@ -8,7 +8,7 @@ const shortText = z.string().min(1).max(200);
 export const Comparison = defineComponent({
   name: "Comparison",
   description:
-    "Two selectable comparison cards inside Form. On mobile, swipe left chooses the first option and right the second; buttons and undo also work. Selection stays local until Form submission. value is an option id, or empty for no choice. Facts, images and source links must be supplied or verified. Optional amount is a comparable numeric value in the SAME unit for both options; it is published as name_amount, with name_label for the title. Do not invent prices or use 0 for unknown amounts.",
+    "Two selectable comparison cards inside Form. On mobile, swipe left chooses the first option and right the second; buttons and undo also work. Selection stays local until Form submission. value is an option id, or empty for no choice. Facts, images and source links must be supplied or verified. Preserve the scope of EACH option's supplied facts: a generic warranty duration cannot go under a part-specific coverage label, and labels need not match across cards. Use broad Warranty duration and Coverage unknown instead. Unknown condition for both does not prove either lower risk. Optional amount is a comparable numeric value in the SAME unit for both options; it is published as name_amount, with name_label for the title. Do not invent prices or use 0 for unknown amounts.",
   props: z
     .object({
       name: shortText,
@@ -45,15 +45,15 @@ export const Comparison = defineComponent({
 export const costRowSchema = z.object({
   id: shortText,
   label: shortText,
-  quantity: z.number().min(0).max(1_000_000),
-  unitPrice: z.number().min(0).max(1_000_000_000),
+  quantity: z.number().min(0).max(1_000_000).nullable().optional(),
+  unitPrice: z.number().min(0).max(1_000_000_000).nullable().optional(),
   included: z.boolean(),
 });
 
 export const CostTable = defineComponent({
   name: "CostTable",
   description:
-    "Editable line items inside Form: quantities, unit prices, and include/exclude controls. Up to eight rows with unique ids. Recalculates included row totals locally; exposes the rows at name and a numeric name_total to CalculatedMetric. Row quantities are independent: they do not follow a separate NumberField. For charges driven by a shared headcount or duration, use that NumberField directly in CalculatedMetric instead of copying its initial value into a row. One ISO currency per table. Unknown prices must be clarified, never entered as 0. Use this for a budget or estimate, not arbitrary datasets. It does not purchase anything.",
+    "Editable line items inside Form: quantities, unit prices, and include/exclude controls. Up to eight rows with unique ids. Recalculates included row totals locally; exposes the rows at name and a numeric name_total to CalculatedMetric. Row quantities are independent: they do not follow a separate NumberField. For charges driven by a shared headcount or duration, use that NumberField directly in CalculatedMetric instead of copying its initial value into a row. One ISO currency per table. Use null for unknown quantity or price, never 0: included unknown rows pause the total and submission until supplied or explicitly excluded. Use this for a budget or estimate, not arbitrary datasets. It does not purchase anything.",
   props: z
     .object({
       name: shortText,

@@ -265,7 +265,11 @@ from ._test_data import make_session
 # Measured 85,955; preserve the existing 300-char margin. Wire budget is unchanged.
 # Shared-quantity and formula guidance adds 434 deferred characters in #15362.
 # CI merge ref measures 86,359; preserve the 300-char margin. Wire is unchanged.
-_CHAR_BUDGET = 86_659
+# Schedule and nullable numeric inputs expand only the deferred OpenUI catalog.
+# Measured registry: 88,091 characters; retain the existing 300-character margin.
+# Comparison evidence guidance and per-turn discovery add 366 characters.
+# Measured 88,457; retain the 300-character margin. Wire budget remains unchanged.
+_CHAR_BUDGET = 88_757
 
 
 @pytest.fixture(scope="module")

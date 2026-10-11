@@ -7,6 +7,7 @@ export function createCopilotRequestLifecycle(
   controllerRef: MutableValue<AbortController | null>,
 ) {
   let active: Promise<void> | null = null;
+  let activeKind: "send" | "resume" | null = null;
   let restarting: Promise<void> | null = null;
   let generation = 0;
   let stopped = false;
@@ -16,11 +17,13 @@ export function createCopilotRequestLifecycle(
     controllerRef.current?.abort();
   }
 
-  function startRequest(start: () => Promise<void>) {
+  function startRequest(start: () => Promise<void>, kind: "send" | "resume") {
     controllerRef.current = new AbortController();
+    activeKind = kind;
     const request = start().finally(() => {
       if (active === request) {
         active = null;
+        activeKind = null;
         controllerRef.current = null;
       }
     });
@@ -30,6 +33,7 @@ export function createCopilotRequestLifecycle(
 
   function replaceRequest(
     start: () => Promise<void>,
+    kind: "send" | "resume",
     beforeStart?: () => void,
   ) {
     const version = ++generation;
@@ -41,7 +45,7 @@ export function createCopilotRequestLifecycle(
         if (version !== generation) return;
         restarting = null;
         beforeStart?.();
-        return startRequest(start);
+        return startRequest(start, kind);
       })
       .finally(() => {
         if (restarting === request) restarting = null;
@@ -53,16 +57,17 @@ export function createCopilotRequestLifecycle(
   function sendMessage(...args: Parameters<Chat<UIMessage>["sendMessage"]>) {
     stopped = false;
     if (active || restarting) {
-      return replaceRequest(() => chat.sendMessage(...args));
+      return replaceRequest(() => chat.sendMessage(...args), "send");
     }
     generation++;
-    return startRequest(() => chat.sendMessage(...args));
+    return startRequest(() => chat.sendMessage(...args), "send");
   }
 
-  function resumeStream(beforeResume?: () => void) {
+  function resumeStream(beforeResume?: () => void, force = false) {
     if (stopped) return Promise.resolve();
     if (restarting) return restarting;
-    return replaceRequest(() => chat.resumeStream(), beforeResume);
+    if (active && activeKind === "resume" && !force) return active;
+    return replaceRequest(() => chat.resumeStream(), "resume", beforeResume);
   }
 
   function stop() {

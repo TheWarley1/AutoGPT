@@ -22,7 +22,7 @@ class RenderUIInput(BaseModel):
     model_config = ConfigDict(strict=True, str_strip_whitespace=True)
 
     source: str = Field(min_length=1, max_length=60_000)
-    summary: str = Field(min_length=1, max_length=10_000)
+    summary: str = Field(default="", max_length=10_000)
 
     @field_validator("source")
     @classmethod
@@ -75,14 +75,14 @@ class RenderUITool(BaseTool):
                 "summary": {
                     "type": "string",
                     "description": (
-                        "A self-contained plain-text account of the same findings or "
-                        "questions. Saved with the view and shown if rendering fails "
-                        "or the client cannot display interactive UI."
+                        "Optional legacy summary. The saved fallback is generated "
+                        "from the validated view, including its computed totals. "
+                        "Put all findings, caveats and sources in the view itself."
                     ),
                     "maxLength": 10_000,
                 },
             },
-            "required": ["source", "summary"],
+            "required": ["source"],
         }
 
     async def _execute(
@@ -101,14 +101,14 @@ class RenderUITool(BaseTool):
                 message=(
                     f"{issue['msg']}. "
                     "Provide a complete OpenUI program beginning with root = "
-                    "Workspace(...), at most 60,000 characters, and a nonempty "
-                    "plain-text summary of at most 10,000 characters."
+                    "Workspace(...), at most 60,000 characters. Any legacy "
+                    "summary must be at most 10,000 characters."
                 ),
                 session_id=session.session_id,
             )
         response = RenderUIResponse(
             source=request.source,
-            message=request.summary,
+            message="",
             session_id=session.session_id,
         )
         if len(response.model_dump_json().encode()) > 70_000:
@@ -133,8 +133,20 @@ async def _validated_response(response: RenderUIResponse) -> ToolResponseBase:
         return ErrorResponse(
             message=f"View not published: {validation.error} "
             'Correct these issues and retry run_capability(id="tool:render_ui", '
-            "input={...}) with a complete source "
-            "and matching plain-text summary. Preserve the user's data and constraints.",
+            "input={...}) with a complete source. "
+            "Preserve the user's data and constraints; the summary is generated.",
+            session_id=response.session_id,
+        )
+    if not validation.summary:
+        return ErrorResponse(
+            message="Interactive validation returned no text summary. "
+            "Provide the complete answer as plain text instead.",
+            session_id=response.session_id,
+        )
+    response.message = validation.summary
+    if len(response.model_dump_json().encode()) > 70_000:
+        return ErrorResponse(
+            message="This view is too large. Use fewer rows or shorter descriptions.",
             session_id=response.session_id,
         )
     return response

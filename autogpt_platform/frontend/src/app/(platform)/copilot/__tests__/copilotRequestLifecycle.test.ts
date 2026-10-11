@@ -61,8 +61,10 @@ it("aborts a stalled GET and coalesces simultaneous resume requests before start
   const original = runtime.resumeStream();
   await waitFor(() => expect(runtime.chat.status).toBe("streaming"));
   const beforeResume = vi.fn();
-  const replacement = runtime.resumeStream(beforeResume);
-  expect(runtime.resumeStream(beforeResume)).toBe(replacement);
+  expect(runtime.resumeStream()).toBe(runtime.resumeStream());
+  expect(gets).toBe(1);
+  const replacement = runtime.resumeStream(beforeResume, true);
+  expect(runtime.resumeStream(beforeResume, true)).toBe(replacement);
   await Promise.all([original, replacement]);
   expect(firstAborted).toBe(true);
   expect(gets).toBe(2);

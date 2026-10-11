@@ -13,6 +13,7 @@ class ValidationResult(BaseModel):
 
     valid: bool
     error: str = Field(max_length=2000)
+    summary: str = Field(default="", max_length=10_000)
 
 
 class ValidatorUnavailable(Exception):
@@ -47,7 +48,7 @@ async def validate_openui_source(source: str) -> ValidationResult:
     except TimeoutError as error:
         await _terminate(process)
         raise ValidatorUnavailable("Validator timed out") from error
-    if process.returncode != 0 or len(output) > 8192:
+    if process.returncode != 0 or len(output) > 65_536:
         raise ValidatorUnavailable("Validator failed")
     try:
         return ValidationResult.model_validate_json(output)

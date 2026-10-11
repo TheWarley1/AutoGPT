@@ -25,7 +25,7 @@ interface UseCopilotReconnectArgs {
    * Ref holding `useChat`'s latest `resumeStream`. Kept in a ref so the
    * timer callback always invokes the current value without stale closures.
    */
-  resumeStreamRef: React.MutableRefObject<() => void>;
+  resumeStreamRef: React.MutableRefObject<(force?: boolean) => void>;
   /**
    * Flipped to `true` when a reconnect actually fires, so a deferred
    * page-load resume (queued in `pendingResumeRef` while hydration was in
@@ -65,7 +65,7 @@ export function useCopilotReconnect({
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const reconnectTimeoutTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
-  function handleReconnect() {
+  function handleReconnect(force = false, silent = false) {
     if (!sessionId) return;
     if (reconnectScheduledRef.current) return;
 
@@ -109,7 +109,7 @@ export function useCopilotReconnect({
     reconnectAttemptsRef.current = nextAttempt;
     setIsReconnectScheduled(true);
 
-    if (!hasShownDisconnectToastRef.current) {
+    if (!silent && !hasShownDisconnectToastRef.current) {
       hasShownDisconnectToastRef.current = true;
       toast({ title: "Connection lost", description: "Reconnecting..." });
     }
@@ -121,7 +121,7 @@ export function useCopilotReconnect({
       // pendingResumeRef while hydration was in flight) can't double-fire.
       hasResumedRef.current = true;
       setIsReconnectScheduled(false);
-      resumeStreamRef.current();
+      resumeStreamRef.current(force);
     }, delay);
   }
 

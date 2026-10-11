@@ -1,5 +1,8 @@
 import { costRowSchema } from "./catalog-connected";
 import { asNumber } from "./calculations";
+import { scheduleTaskSchema } from "./catalog-schedule";
+
+export const MAX_FORM_VALUES = 36;
 
 type ActionValue =
   | string
@@ -15,8 +18,9 @@ export function getActionFields(state: unknown, formName?: string) {
   const fields = formName ? record[formName] : record;
   if (!fields || typeof fields !== "object") return {};
   const result: Record<string, ActionValue> = {};
-  for (const [name, field] of Object.entries(fields).slice(0, 32)) {
-    if (name.endsWith("__valid")) continue;
+  for (const [name, field] of Object.entries(fields)
+    .filter(([name]) => !name.endsWith("__valid"))
+    .slice(0, MAX_FORM_VALUES)) {
     const value =
       field && typeof field === "object" && "value" in field
         ? field.value
@@ -42,6 +46,16 @@ function actionValue(value: unknown, depth = 0): ActionValue | undefined {
   if (!value || typeof value !== "object" || Object.keys(value).length > 12)
     return undefined;
   const record = value as Record<string, unknown>;
+  const task = scheduleTaskSchema.safeParse({
+    ...record,
+    minutes: asNumber(record.minutes),
+  });
+  if (task.success) return task.data;
+  const completedTask = scheduleTaskSchema
+    .omit({ minutes: true })
+    .safeParse(record);
+  if (completedTask.success && completedTask.data.done)
+    return completedTask.data;
   const cost = costRowSchema.safeParse({
     ...record,
     quantity: asNumber(record.quantity),
