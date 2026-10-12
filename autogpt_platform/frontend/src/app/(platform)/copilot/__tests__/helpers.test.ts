@@ -11,6 +11,7 @@ import {
   getSendSuppressionReason,
   parseSessionIDs,
   isEngineSwitchPart,
+  resolveCompletionNotificationContent,
   resolveSessionDryRun,
   shouldDebounceReconnect,
   shouldSuppressDuplicateSend,
@@ -790,5 +791,56 @@ describe("isEngineSwitchPart", () => {
     expect(
       isEngineSwitchPart({ type: "data-mode-changed", data: "fast" }),
     ).toBe(false);
+  });
+});
+
+describe("resolveCompletionNotificationContent", () => {
+  it("prefers the backend-composed display fields", () => {
+    expect(
+      resolveCompletionNotificationContent({
+        title: "Maria",
+        body: "Finished: Q3 revenue report",
+        icon: "/avatars/maria.webp",
+      }),
+    ).toEqual({
+      title: "Maria",
+      body: "Finished: Q3 revenue report",
+      icon: "/avatars/maria.webp",
+    });
+  });
+
+  it("falls back per-field when display fields are missing", () => {
+    expect(resolveCompletionNotificationContent({})).toEqual({
+      title: COPILOT_COMPLETION_NOTIFICATION.title,
+      body: COPILOT_COMPLETION_NOTIFICATION.body,
+      icon: COPILOT_COMPLETION_NOTIFICATION.icon,
+    });
+  });
+
+  it("falls back per-field when display fields are empty or non-strings", () => {
+    expect(
+      resolveCompletionNotificationContent({
+        title: "",
+        body: null,
+        icon: 42,
+      }),
+    ).toEqual({
+      title: COPILOT_COMPLETION_NOTIFICATION.title,
+      body: COPILOT_COMPLETION_NOTIFICATION.body,
+      icon: COPILOT_COMPLETION_NOTIFICATION.icon,
+    });
+  });
+
+  it("mixes server fields with fallbacks field-by-field", () => {
+    expect(
+      resolveCompletionNotificationContent({
+        title: "Maria",
+        body: "Finished: Q3 revenue report",
+      }),
+    ).toEqual({
+      title: "Maria",
+      body: "Finished: Q3 revenue report",
+      icon: COPILOT_COMPLETION_NOTIFICATION.icon,
+    });
   });
 });
